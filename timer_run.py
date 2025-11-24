@@ -20,44 +20,31 @@ def start_clock(minutes: str, sec:str):
         time.sleep(1)  # every second
         total_seconds -= 1  # take one second
 
-def clock_update(window, minutes: str=None, sec:str=None, total_sec=None):
-
-    if total_sec:
-        total_seconds=total_sec
+def counter_func(total_seconds):
+    minutes = (floor(total_seconds / 60))
+    sec = total_seconds - (minutes * 60)
+    if len(str((round(sec)))) < 2:
+        sec = "0" + str(round(sec))
     else:
-        total_seconds = (float(minutes) * 60) + float(sec)
+        sec=round(sec)
+    print(f" [[   {minutes}:{sec}]]")
 
-    def counter_func(total_seconds):
-        minutes = str(floor(total_seconds / 60))
-        sec = total_seconds - (minutes * 60)
-        if len(str((round(sec)))) < 2:
-            sec = "0" + str(round(sec))
-            print(f" [[   {minutes}:{sec}]]")
-        else:
-            print(f" [[   {minutes}:{round(sec)}]]")
-        window['minutes'].update(minutes)
-        window['seconds'].update(str(sec))
-        window["minutes"]
+    return str(minutes), str(sec)
 
-    while total_seconds>0:
-        counter_func(total_seconds)
-        time.sleep(1)  # every second
-        total_seconds -= 1  # take one second
+def clock_update(total_seconds):
 
-        return minutes, sec, total_seconds
+    time.sleep(1)  # every second
+    total_seconds -= 1  # take one second
+
+    return total_seconds
 
 
-
-
-
-
-
-
-
-def parse_inputtext(input_text):
-    minute = 00
-    sec = 00
+def parse_inputtext(input_text:str):
+    split_text=None
+    minute = "00"
+    sec = "00"
     separators = (":", ".", " ",)
+
     if len(input_text) > 2:
         #needs processing
         for x in separators:
@@ -65,9 +52,12 @@ def parse_inputtext(input_text):
                 split_text=input_text.split(x)
                 print(f"Split text: {split_text}, len: {len(split_text)}, type: {type(split_text)}")
 
-    if len(split_text) == 2:
-        minute=split_text[0]
-        sec = split_text[1]
+    if len(input_text) == 1:
+        minute = input_text
+    elif split_text and len(split_text) == 2:
+            minute=split_text[0]
+            sec = split_text[1]
+
     return minute, sec
 
 def counter_text(key_str="minutes"):
@@ -98,16 +88,13 @@ def make_window():
 
     layout = [[sg.Frame(title="clock", layout=main_contents)
                ]]
-    """
-    if window['-IN-'] == "please type a number in here":
-        window['-IN-'].update('')
-    """
+
     # Create the Window
     minute = sec = 00
     window = sg.Window('Window Title', layout, keep_on_top=True, finalize=True)
     window['-INPUT-'].bind("<Return>", "_Enter")
     while True:
-        event, values = window.read()
+        event, values = window.read(timeout=1000)
         if event == "-START-" or event == "-INPUT-" + "_Enter":
             input_text: str = values['-INPUT-']
             if input_text:
@@ -115,15 +102,32 @@ def make_window():
                 minute, sec = parse_inputtext(input_text)
                 print(f"Minute: {minute}, sec: {sec}")
                 total_sec = (float(minute) * 60) + float(sec)
-                window['minutes'].update(minute)
-                window['seconds'].update(sec)
                 print("Starting clock...")
-                start_clock(minute, sec)
-                #minute, sec, total_seconds = clock_update(window, minute, sec, total_seconds)
-                #start_clock(window, minute, sec)
+                while True:
+                    minutes, seconds = counter_func(total_sec)
+                    window['minutes'].update(minutes)
+                    window['seconds'].update(seconds)
+                    print(f"min: {minutes}, sec: {seconds}")
+                    total_sec = clock_update(total_sec)
+                    window.finalize()
+                    if total_sec < 0:
+                        break
                 # I really want to animate it opening its eyes when the timer's about to start.
             else:
                 print("Please enter a number")
+
+        if event == "Start":
+            running = True
+
+        if event == "Stop":
+            running = False
+
+        if running:
+            total_seconds -= 1
+            window["-TIMER-"].update(total_seconds)
+
+        if total_seconds <= 0:
+            running = False
 
         if event == sg.WIN_CLOSED or event == '-EXIT-':  # if user closes window or clicks cancel
             break
